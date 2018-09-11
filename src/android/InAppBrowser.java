@@ -1151,7 +1151,7 @@ public class InAppBrowser extends CordovaPlugin {
         public void onPageStarted(WebView view, String url, Bitmap favicon) {
             super.onPageStarted(view, url, favicon);
             String newloc = "";
-            if (url.startsWith("http:") || url.startsWith("https:") || url.startsWith("file:")) {
+            if (url.startsWith("http:") || url.startsWith("https:") || url.startsWith("file:") || url.startsWith("fingo:")) {
                 newloc = url;
             }
             else
