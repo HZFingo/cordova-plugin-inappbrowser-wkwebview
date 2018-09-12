@@ -1,6 +1,6 @@
 # cordova-plugin-inappbrowser-wkwebview
 
-- This is a fork of [cordova-plugin-inappbrowser](https://github.com/apache/cordova-plugin-inappbrowser)
+- This is a fork of [cordova-plugin-inappbrowser-wkwebview](https://github.com/dpa99c/cordova-plugin-inappbrowser-wkwebview)
 - It uses the the newer [WKWebview](https://developer.apple.com/documentation/webkit/wkwebview) to power the InAppBrowser, in contrast to `cordova-plugin-inappbrowser` which still currently uses the legacy [UIWebView](https://developer.apple.com/documentation/uikit/uiwebview).
 - Only the iOS platform has been changed from the original `cordova-plugin-inappbrowser`.
 - The plugin supports iOS 9 and above
