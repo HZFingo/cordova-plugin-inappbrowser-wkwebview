@@ -566,7 +566,15 @@
 
 #pragma mark CDVInAppBrowserViewController
 
+@interface CDVInAppBrowserViewController()
+
+@property(nonatomic, assign) BOOL isWK;
+@property(nonatomic, assign) NSInteger paddingBottom;
+
+@end
+
 @implementation CDVInAppBrowserViewController
+
 
 @synthesize currentURL;
 
@@ -589,8 +597,10 @@ BOOL isExiting = FALSE;
     return self;
 }
 
+
 -(void)dealloc {
     //NSLog(@"dealloc");
+    [[NSNotificationCenter defaultCenter] removeObserver:self];
 }
 
 - (void)createViews
@@ -888,6 +898,13 @@ BOOL isExiting = FALSE;
 {
     viewRenderedAtLeastOnce = FALSE;
     [super viewDidLoad];
+    self.isWK = [self.webView isKindOfClass:NSClassFromString(@"WKWebView")];
+    NSNotificationCenter *nc = [NSNotificationCenter defaultCenter];
+
+    [nc addObserver:self selector:@selector(onKeyboardWillHide:) name:UIKeyboardWillHideNotification object:nil];
+    [nc addObserver:self selector:@selector(onKeyboardDidHide:) name:UIKeyboardDidHideNotification object:nil];
+    [nc addObserver:self selector:@selector(onKeyboardWillShow:) name:UIKeyboardWillShowNotification object:nil];
+    [nc addObserver:self selector:@selector(onKeyboardDidShow:) name:UIKeyboardDidShowNotification object:nil];
 }
 
 - (void)viewDidDisappear:(BOOL)animated
@@ -996,6 +1013,84 @@ BOOL isExiting = FALSE;
     return [UIColor colorWithRed:((rgbValue & 0xFF0000) >> 16)/255.0 green:((rgbValue & 0xFF00) >> 8)/255.0 blue:(rgbValue & 0xFF)/255.0 alpha:1.0];
 }
 
+
+#pragma mark Keyboard events
+
+- (void)resetScrollView
+{
+    UIScrollView *scrollView = [self.webView scrollView];
+    [scrollView setContentInset:UIEdgeInsetsZero];
+}
+
+- (void)onKeyboardWillHide:(NSNotification *)sender
+{
+    [self setKeyboardHeight:0 delay:0.01];
+    [self resetScrollView];
+}
+
+- (void)onKeyboardWillShow:(NSNotification *)note
+{
+    CGRect rect = [[note.userInfo valueForKey:UIKeyboardFrameEndUserInfoKey] CGRectValue];
+    double height = rect.size.height;
+
+    double duration = [[note.userInfo valueForKey:UIKeyboardAnimationDurationUserInfoKey] doubleValue];
+    [self setKeyboardHeight:height delay:duration/2.0];
+    [self resetScrollView];
+
+}
+
+- (void)onKeyboardDidShow:(NSNotification *)note
+{
+    if (self.isWK) {
+        [self resetScrollView];
+    }
+}
+
+- (void)onKeyboardDidHide:(NSNotification *)sender
+{
+    [self resetScrollView];
+}
+
+- (void)setKeyboardHeight:(int)height delay:(NSTimeInterval)delay
+{
+    [self setPaddingBottom: height delay:delay];
+}
+
+- (void)setPaddingBottom:(int)paddingBottom delay:(NSTimeInterval)delay
+{
+    if (self.paddingBottom == paddingBottom) {
+        return;
+    }
+
+    self.paddingBottom = paddingBottom;
+    __weak CDVInAppBrowserViewController* weakSelf = self;
+    SEL action = @selector(_updateFrame);
+    [NSObject cancelPreviousPerformRequestsWithTarget:weakSelf selector:action object:nil];
+    if (delay == 0) {
+        [self _updateFrame];
+    } else {
+        [weakSelf performSelector:action withObject:nil afterDelay:delay];
+    }
+}
+
+- (void)_updateFrame
+{
+    CGSize statusBarSize = [[UIApplication sharedApplication] statusBarFrame].size;
+    int statusBarHeight = MIN(statusBarSize.width, statusBarSize.height);
+
+    int _paddingBottom = (int)self.paddingBottom;
+
+    if (statusBarHeight == 40) {
+        _paddingBottom = _paddingBottom + 20;
+    }
+    NSLog(@"CDVIonicKeyboard: updating frame");
+    CGRect f = [[UIScreen mainScreen] bounds];
+    CGRect wf = self.webView.frame;
+    [self.webView setFrame:CGRectMake(wf.origin.x, wf.origin.y, f.size.width - wf.origin.x, f.size.height - wf.origin.y - self.paddingBottom)];
+    [self resetScrollView];
+}
+
+
 #pragma mark WKNavigationDelegate
 
 - (void)webView:(WKWebView *)theWebView didStartProvisionalNavigation:(WKNavigation *)navigation{
@@ -1022,7 +1117,7 @@ BOOL isExiting = FALSE;
     if ([scheme isEqualToString:@"tel"] || [scheme isEqualToString:@"mailto"]) {
         [self.navigationDelegate openInSystem:url];
         decisionHandler(WKNavigationActionPolicyCancel);
-    } else if ([scheme isEqualToString:@"fingo"]) {
+    } else if ([scheme isEqualToString:@"8"]) {
         [self.navigationDelegate webView:theWebView decidePolicyForNavigationAction:[NSURLRequest requestWithURL:url]];
         decisionHandler(WKNavigationActionPolicyCancel);
     } else {
@@ -1268,6 +1363,5 @@ BOOL isExiting = FALSE;
 
     return YES;
 }
-
 
 @end //CDVInAppBrowserNavigationController
